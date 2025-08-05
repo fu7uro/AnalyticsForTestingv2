@@ -16,37 +16,31 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=4)
 # Enable CORS for all routes
 CORS(app, supports_credentials=True)
 
-# Register blueprints
-app.register_blueprint(analytics_bp)
-app.register_blueprint(auth_bp)
+# Register blueprints with URL prefixes
+app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+app.register_blueprint(auth_bp, url_prefix='/api')
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
-    # Check if accessing login page
-    if path == 'login' or path == 'login.html':
-        return send_from_directory(app.static_folder, 'login.html')
-    
-    # For main dashboard, check authentication
-    if path == '' or path == 'index.html':
-        if 'agent_id' not in session:
-            return redirect('/login')
-    
-    static_folder_path = app.static_folder
-    if static_folder_path is None:
-        return "Static folder not configured", 404
-
-    if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
-        return send_from_directory(static_folder_path, path)
-    else:
-        # For authenticated users, serve the main dashboard
-        if 'agent_id' in session:
-            index_path = os.path.join(static_folder_path, 'index.html')
-            if os.path.exists(index_path):
-                return send_from_directory(static_folder_path, 'index.html')
-        
-        # Unauthenticated users get redirected to login
+@app.route('/')
+def index():
+    """Serve the main dashboard"""
+    if 'agent_id' not in session:
         return redirect('/login')
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/login')
+def login_page():
+    """Serve the login page"""
+    return send_from_directory(app.static_folder, 'login.html')
+
+@app.route('/dashboard')
+def dashboard():
+    """Redirect to main page"""
+    return redirect('/')
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """Serve static files"""
+    return send_from_directory(app.static_folder, filename)
 
 
 if __name__ == '__main__':
