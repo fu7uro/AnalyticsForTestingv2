@@ -258,16 +258,23 @@
         <div id="dashboardContent" style="display: none;">
           <!-- Analytics Time Period Tabs -->
         <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 mb-8">
-            <div class="flex flex-wrap gap-4 mb-6">
-                <button id="tab-today" class="analytics-tab active px-6 py-3 rounded-lg font-semibold transition-all duration-300 bg-purple-600 text-white">
-                    📊 Today
-                </button>
-                <button id="tab-7days" class="analytics-tab px-6 py-3 rounded-lg font-semibold transition-all duration-300 bg-gray-700 text-gray-300 hover:bg-gray-600">
-                    📈 Last 7 Days
-                </button>
-                <button id="tab-30days" class="analytics-tab px-6 py-3 rounded-lg font-semibold transition-all duration-300 bg-gray-700 text-gray-300 hover:bg-gray-600">
-                    📅 Last 30 Days
-                </button>
+            <div class="flex flex-wrap gap-4 mb-6 justify-between">
+                <div class="flex flex-wrap gap-4">
+                    <button data-filter="today" class="time-filter-btn active px-6 py-3 rounded-lg font-semibold transition-all duration-300 bg-purple-600 text-white">
+                        📊 Today
+                    </button>
+                    <button data-filter="7days" class="time-filter-btn px-6 py-3 rounded-lg font-semibold transition-all duration-300 bg-gray-700 text-gray-300 hover:bg-gray-600">
+                        📈 Last 7 Days
+                    </button>
+                    <button data-filter="30days" class="time-filter-btn px-6 py-3 rounded-lg font-semibold transition-all duration-300 bg-gray-700 text-gray-300 hover:bg-gray-600">
+                        📅 Last 30 Days
+                    </button>
+                </div>
+                <div>
+                    <button class="csv-export-btn px-6 py-3 rounded-lg font-semibold transition-all duration-300 bg-green-600 text-white hover:bg-green-700">
+                        📊 Export CSV
+                    </button>
+                </div>
             </div>
             
             <!-- Time-based Analytics Content -->
@@ -489,7 +496,7 @@
             <!-- Conversations List -->
             <div class="glass-card rounded-lg p-6">
                 <h3 class="text-xl font-semibold mb-6 text-white">Recent Conversations</h3>
-                <div id="conversationsList" class="space-y-4">
+                <div class="conversations-container space-y-4">
                     <!-- Conversations will be loaded here -->
                 </div>
             </div>
@@ -628,7 +635,26 @@
                 }
             });
         }
+        
+        // Add logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Logout failed:', error);
+                window.location.href = '/login';
+            }
+        });
     </script>
+    
+    <!-- Loading indicator -->
+    <div class="loading-indicator" style="display: none;">
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <span>Loading...</span>
+        </div>
+    </div>
 </body>
 </html>
 
