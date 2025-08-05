@@ -7,7 +7,7 @@ import os
 auth_bp = Blueprint('auth', __name__)
 
 # Configuration
-ELEVENLABS_API_KEY = "sk_443c531bae96a3318af7d3858ce2ad308b74a0e965f4662b"
+ELEVENLABS_API_KEY = "sk_e25899b1054a36c01b57ed036ebedfee65c1afbf14f3cad6"
 ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"
 GENERIC_PASSWORD = "Kk7B28j!RrEes"
 

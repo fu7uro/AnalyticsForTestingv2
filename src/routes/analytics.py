@@ -11,13 +11,50 @@ from src.utils.auth import require_auth
 analytics_bp = Blueprint('analytics', __name__)
 
 # 11labs API configuration
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "sk_443c531bae96a3318af7d3858ce2ad308b74a0e965f4662b")
-ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"
-
-@analytics_bp.route('/health')
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "sk_e25899b1054a36c01b57ed036ebedfee65c1afbf14f3cad6")
+ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"@analytics_bp.route('/health')
 def health_check():
     """Health check endpoint"""
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    return jsonify({"status": "healthy", "service": "analytics"})
+
+# Mock data for testing
+MOCK_DATA_MODE = True  # Set to False for production
+
+def get_mock_conversations():
+    """Generate mock conversation data for testing"""
+    from datetime import datetime, timedelta
+    import random
+    
+    conversations = []
+    for i in range(20):
+        date = datetime.now() - timedelta(days=random.randint(0, 30))
+        duration = random.randint(30, 1200)  # 30 seconds to 20 minutes
+        messages = random.randint(1, 50)
+        status = random.choice(['completed', 'transferred', 'failed'])
+        
+        conversations.append({
+            'conversation_id': f'conv_{i+1:03d}',
+            'start_time_unix_secs': int(date.timestamp()),
+            'metadata': {
+                'call_duration_secs': duration,
+                'status': status
+            },
+            'transcript': [{'message': f'Message {j+1}'} for j in range(messages)],
+            'analysis': {
+                'evaluation_result': {
+                    'overall_score': random.uniform(0.6, 1.0),
+                    'criteria_scores': {
+                        'helpfulness': random.uniform(0.7, 1.0),
+                        'accuracy': random.uniform(0.6, 1.0),
+                        'professionalism': random.uniform(0.8, 1.0)
+                    }
+                },
+                'sentiment': random.choice(['positive', 'neutral', 'negative'])
+            },
+            'tools_used': random.choice([[], ['search_tool'], ['booking_tool', 'payment_tool']])
+        })
+    
+    return conversationsnow().isoformat()})
 
 def make_elevenlabs_request(endpoint, params=None):
     """Make request to ElevenLabs API"""
