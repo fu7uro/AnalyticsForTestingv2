@@ -54,7 +54,7 @@ def get_mock_conversations():
             'tools_used': random.choice([[], ['search_tool'], ['booking_tool', 'payment_tool']])
         })
     
-    return conversationsnow().isoformat()})
+    return conversations
 
 def make_elevenlabs_request(endpoint, params=None):
     """Make request to ElevenLabs API"""
