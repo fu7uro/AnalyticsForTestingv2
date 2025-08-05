@@ -12,7 +12,9 @@ analytics_bp = Blueprint('analytics', __name__)
 
 # 11labs API configuration
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "sk_e25899b1054a36c01b57ed036ebedfee65c1afbf14f3cad6")
-ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"@analytics_bp.route('/health')
+ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"
+
+@analytics_bp.route('/health')
 def health_check():
     """Health check endpoint"""
     return jsonify({"status": "healthy", "service": "analytics"})
