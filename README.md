@@ -1,14 +1,5 @@
 # Futuro Analytics Platform
 
-
-Fresh 11 Labs API Key for testing:  sk_e25899b1054a36c01b57ed036ebedfee65c1afbf14f3cad6
-
-Login info to current version of portal:
-
-https://futuroanalytics9-0.onrender.com
-- **Agent ID**: `agent_01k0h3sk6ee79ab9cc99nyf1pg`
-- **Password**: `Kk7B28j!RrEes`
-
 A comprehensive analytics dashboard for conversational AI agents powered by 11labs API.
 
 ## Features
