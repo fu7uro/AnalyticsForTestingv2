@@ -743,11 +743,16 @@ class TimeBasedAnalytics {
     }
 
     updateMetrics(metrics) {
-        // Update metric values
+        // Update metric values, but preserve existing avg duration if it's already correctly set
+        const avgDurationElement = document.getElementById('metric-avg-duration');
+        const currentAvgDuration = avgDurationElement ? avgDurationElement.textContent : '';
+        
         const elements = {
             'metric-total-calls': metrics.totalCalls || '0',
             'metric-success-rate': `${metrics.successRate || 0}%`,
-            'metric-avg-duration': metrics.avgDuration || '0m 0s',
+            'metric-avg-duration': (currentAvgDuration && currentAvgDuration !== '0m 0s' && currentAvgDuration !== '-') 
+                ? currentAvgDuration 
+                : (metrics.avgDuration || '0m 0s'),
             'metric-eval-score': `${metrics.evaluationScore || 0}%`
         };
 
