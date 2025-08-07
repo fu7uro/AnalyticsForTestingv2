@@ -136,9 +136,14 @@ class FuturoAnalytics {
             successRate.textContent = `${data.successRate || 0}%`;
         }
         
-        const avgCallDuration = document.querySelector('.metric-positive-sentiment');
+        const avgCallDuration = document.getElementById('metric-avg-duration');
         if (avgCallDuration) {
             avgCallDuration.textContent = data.avgCallDuration || '0m 0s';
+        }
+        
+        const positiveSentiment = document.querySelector('.metric-positive-sentiment');
+        if (positiveSentiment) {
+            positiveSentiment.textContent = `${data.positiveSentimentPercentage || 0}%`;
         }
         
         // Update evaluation score in the top metrics area
@@ -294,392 +299,233 @@ class FuturoAnalytics {
             
             const data = await response.json();
             
-            // Remove loading modal
-            loadingModal.remove();
+            // Close loading modal
+            document.body.removeChild(loadingModal);
             
-            // Show actual data modal
+            // Show the actual tools data
             this.showToolsUsedModal(data);
         } catch (error) {
-            console.error('Error loading tools data:', error);
+            // Remove loading modal on error
+            if (loadingModal && loadingModal.parentNode) {
+                document.body.removeChild(loadingModal);
+            }
             
-            // Remove loading modal
-            loadingModal.remove();
-            
-            // Show error modal
-            const errorModal = this.createModal('🔧 Tools Used - Error', `
-                <div class="text-center py-8">
-                    <div class="text-red-500 mb-4">
-                        <svg class="w-12 h-12 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <p class="text-gray-400 text-lg mb-2">Failed to load tools data</p>
-                    <p class="text-gray-500 text-sm mb-4">${error.message}</p>
-                    <button onclick="this.closest('.modal-overlay').remove(); analytics.viewToolsUsed('${conversationId}')" 
-                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                        Retry
-                    </button>
-                </div>
-            `);
-            document.body.appendChild(errorModal);
-            
+            console.error('Error loading tools used:', error);
             this.showNotification('Failed to load tools data', 'error');
         }
     }
 
-    async downloadAudio(conversationId) {
-        try {
-            const response = await fetch(`/conversation-audio/${conversationId}`);
-            if (!response.ok) {
-                if (response.status === 401) {
-                    window.location.href = '/login';
-                    return;
-                }
-                throw new Error('Failed to get audio URL');
-            }
-            
-            const data = await response.json();
-            if (data.audioUrl) {
-                window.open(data.audioUrl, '_blank');
-            } else {
-                this.showNotification('Audio not available for this conversation', 'warning');
-            }
-        } catch (error) {
-            console.error('Error downloading audio:', error);
-            this.showNotification('Failed to download audio', 'error');
-        }
-    }
-
     showTranscriptModal(data) {
-        const modal = this.createModal('📞 Conversation Transcript', `
-            <div class="space-y-4">
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                            <span class="text-gray-400">Conversation ID:</span>
-                            <p class="text-white font-mono text-xs">${data.conversationId}</p>
-                        </div>
-                        <div>
-                            <span class="text-gray-400">Messages:</span>
-                            <p class="text-white">${data.messageCount}</p>
-                        </div>
-                        <div>
-                            <span class="text-gray-400">Duration:</span>
-                            <p class="text-white">${data.duration}</p>
-                        </div>
+        const modal = this.createModal('📜 Call Transcript', `
+            <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-400">Duration:</span>
+                        <span class="text-white ml-2">${data.duration || 'N/A'}</span>
                     </div>
-                </div>
-                <div class="bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
-                    <h4 class="text-purple-400 font-semibold mb-3">Full Transcript:</h4>
-                    <div class="text-gray-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
-                        ${data.transcript || 'No transcript available'}
+                    <div>
+                        <span class="text-gray-400">Date:</span>
+                        <span class="text-white ml-2">${data.date || 'N/A'}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Status:</span>
+                        <span class="text-white ml-2 capitalize">${data.status || 'Unknown'}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Messages:</span>
+                        <span class="text-white ml-2">${data.messageCount || 0}</span>
                     </div>
                 </div>
             </div>
+            <div class="bg-gray-800 rounded-lg p-6 max-h-96 overflow-y-auto">
+                <pre class="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">${data.transcript || 'No transcript available'}</pre>
+            </div>
         `);
-        
         document.body.appendChild(modal);
     }
 
     showBriefSummaryModal(data) {
-        const modal = this.createModal('📊 Brief Summary', `
-            <div class="space-y-6">
-                <div class="flex justify-between items-start">
+        const modal = this.createModal('📋 Brief Summary', `
+            <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <h3 class="text-xl font-semibold text-white mb-2">${data.title}</h3>
-                        <div class="flex items-center space-x-4">
-                            <span class="status-${data.status}">${data.status}</span>
-                            <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm">${data.duration}</span>
-                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm">${data.messageCount} messages</span>
-                        </div>
+                        <span class="text-gray-400">Duration:</span>
+                        <span class="text-white ml-2">${data.duration || 'N/A'}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Date:</span>
+                        <span class="text-white ml-2">${data.date || 'N/A'}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Status:</span>
+                        <span class="text-white ml-2 capitalize">${data.status || 'Unknown'}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Call Successful:</span>
+                        <span class="text-white ml-2 capitalize">${data.callSuccessful || 'Unknown'}</span>
                     </div>
                 </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-white mb-3">Summary</h4>
+                <p class="text-gray-300 leading-relaxed">${data.summary || 'No summary available'}</p>
                 
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <h4 class="text-purple-400 font-semibold mb-2">📝 Summary</h4>
-                    <p class="text-gray-300">${data.summary}</p>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h4 class="text-purple-400 font-semibold mb-2">📅 Call Details</h4>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex justify-between">
-                                <span class="text-gray-400">Date:</span>
-                                <span class="text-white">${new Date(data.date).toLocaleString()}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-400">Messages:</span>
-                                <span class="text-white">${data.messageCount}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-400">Agent:</span>
-                                <span class="text-white">${data.agent.name} (${data.agent.type})</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${data.keyPoints && data.keyPoints.length > 0 ? `
-                        <div class="bg-gray-800 rounded-lg p-4">
-                            <h4 class="text-purple-400 font-semibold mb-2">🎯 Key Points</h4>
-                            <ul class="space-y-1 text-sm text-gray-300">
-                                ${data.keyPoints.map(point => `<li class="flex items-start"><span class="text-purple-400 mr-2">•</span>${point}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                </div>
-                
-                ${data.evaluationResults && data.evaluationResults.length > 0 ? `
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h4 class="text-purple-400 font-semibold mb-3">✅ Evaluation Results</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            ${data.evaluationResults.map(result => `
-                                <div class="flex justify-between items-center p-2 bg-gray-700 rounded">
-                                    <span class="text-gray-300 text-sm">${result.criteria}</span>
-                                    <span class="px-2 py-1 rounded text-xs font-semibold ${result.passed ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}">
-                                        ${result.passed ? 'PASS' : 'FAIL'}
-                                    </span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
+                ${data.keyPoints && data.keyPoints.length > 0 ? `
+                    <h4 class="text-lg font-semibold text-white mb-3 mt-6">Key Points</h4>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        ${data.keyPoints.map(point => `<li>${point}</li>`).join('')}
+                    </ul>
                 ` : ''}
             </div>
         `);
-        
         document.body.appendChild(modal);
     }
 
     showDataAnalysisModal(data) {
-        const modal = this.createModal('📊 Detailed Data Analysis', `
-            <div class="space-y-6">
-                <div class="flex justify-between items-start">
+        const modal = this.createModal('📊 Data Analysis', `
+            <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <h3 class="text-xl font-semibold text-white mb-2">${data.title}</h3>
-                        <div class="flex items-center space-x-4">
-                            <span class="status-${data.status}">${data.status}</span>
-                            <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm">${data.duration}</span>
-                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm">${data.messageCount} messages</span>
-                        </div>
+                        <span class="text-gray-400">Duration:</span>
+                        <span class="text-white ml-2">${data.duration || 'N/A'}</span>
                     </div>
-                </div>
-                
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <h4 class="text-purple-400 font-semibold mb-2">📋 Transcript Summary</h4>
-                    <p class="text-gray-300">${data.transcriptSummary}</p>
-                </div>
-                
-                <div class="grid grid-cols-1 gap-4">
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h4 class="text-purple-400 font-semibold mb-3">📝 Call Summary</h4>
-                        <p class="text-gray-300 whitespace-pre-wrap">${data.callSummary}</p>
+                    <div>
+                        <span class="text-gray-400">Date:</span>
+                        <span class="text-white ml-2">${data.date || 'N/A'}</span>
                     </div>
-                    
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h4 class="text-purple-400 font-semibold mb-3">🎯 Call Conclusion</h4>
-                        <p class="text-gray-300 whitespace-pre-wrap">${data.callConclusion}</p>
+                    <div>
+                        <span class="text-gray-400">Status:</span>
+                        <span class="text-white ml-2 capitalize">${data.status || 'Unknown'}</span>
                     </div>
-                    
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h4 class="text-purple-400 font-semibold mb-3">⭐ Caller Interest Rating</h4>
-                        <p class="text-gray-300 whitespace-pre-wrap">${data.callerInterestRating}</p>
-                    </div>
-                </div>
-                
-                ${data.hasDataCollection ? `
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h4 class="text-purple-400 font-semibold mb-3">📊 Data Collection Results</h4>
-                        <div class="space-y-3">
-                            ${Object.entries(data.dataCollectionResults).map(([key, result]) => `
-                                <div class="bg-gray-700 rounded p-3">
-                                    <h5 class="text-white font-medium mb-2">${result.data_collection_id}</h5>
-                                    <p class="text-gray-300 text-sm mb-2"><strong>Value:</strong> ${result.value}</p>
-                                    <p class="text-gray-400 text-xs"><strong>Rationale:</strong> ${result.rationale}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${data.hasEvaluationCriteria ? `
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h4 class="text-purple-400 font-semibold mb-3">✅ Evaluation Criteria Results</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            ${Object.entries(data.evaluationCriteriaResults).map(([key, result]) => `
-                                <div class="bg-gray-700 rounded p-3">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <span class="text-white text-sm font-medium">${result.criteria_id}</span>
-                                        <span class="px-2 py-1 rounded text-xs font-semibold ${
-                                            result.result === 'success' ? 'bg-green-600 text-white' : 
-                                            result.result === 'failure' ? 'bg-red-600 text-white' : 
-                                            'bg-yellow-600 text-white'
-                                        }">
-                                            ${result.result.toUpperCase()}
-                                        </span>
-                                    </div>
-                                    <p class="text-gray-400 text-xs">${result.rationale}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <h4 class="text-purple-400 font-semibold mb-2">📅 Call Details</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-gray-400">Date:</span>
-                            <span class="text-white">${new Date(data.date).toLocaleString()}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-400">Messages:</span>
-                            <span class="text-white">${data.messageCount}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-400">Agent:</span>
-                            <span class="text-white">${data.agent.name}</span>
-                        </div>
+                    <div>
+                        <span class="text-gray-400">Messages:</span>
+                        <span class="text-white ml-2">${data.messageCount || 0}</span>
                     </div>
                 </div>
             </div>
+            <div class="space-y-4">
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-white mb-3">📈 Performance Metrics</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-700 rounded p-3">
+                            <div class="text-gray-400 text-sm">Call Duration</div>
+                            <div class="text-white text-lg font-semibold">${data.duration || 'N/A'}</div>
+                        </div>
+                        <div class="bg-gray-700 rounded p-3">
+                            <div class="text-gray-400 text-sm">Call Outcome</div>
+                            <div class="text-white text-lg font-semibold capitalize">${data.callSuccessful || 'Unknown'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${data.evaluationResults && data.evaluationResults.length > 0 ? `
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-white mb-3">🎯 Evaluation Results</h4>
+                        <div class="space-y-3">
+                            ${data.evaluationResults.map(eval => `
+                                <div class="bg-gray-700 rounded p-3">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-white font-medium">${eval.criteria}</span>
+                                        <span class="text-sm px-2 py-1 rounded ${eval.result === 'pass' ? 'bg-green-600' : eval.result === 'fail' ? 'bg-red-600' : 'bg-yellow-600'} text-white">
+                                            ${eval.result}
+                                        </span>
+                                    </div>
+                                    ${eval.score !== undefined ? `<div class="text-gray-400 text-sm">Score: ${eval.score}</div>` : ''}
+                                    ${eval.feedback ? `<div class="text-gray-300 text-sm mt-2">${eval.feedback}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-white mb-3">📝 Analysis Summary</h4>
+                    <p class="text-gray-300 leading-relaxed">${data.summary || 'No detailed analysis available for this conversation.'}</p>
+                </div>
+            </div>
         `);
-        
         document.body.appendChild(modal);
     }
 
     showToolsUsedModal(data) {
-        // Debug: Log the received data structure
-        console.log('Tools Used Modal Data:', data);
+        let toolsContent = '';
         
-        const modal = this.createModal('🔧 Tools Used', `
-            <div class="space-y-6">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h3 class="text-xl font-semibold text-white mb-2">${data.title || 'Tools Used Analysis'}</h3>
-                        <div class="flex items-center space-x-4">
-                            <span class="status-${data.status || 'completed'}">${(data.status || 'completed').toUpperCase()}</span>
-                            <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm">
-                                <i class="fas fa-clock mr-1"></i>
-                                ${data.duration || '0m 0s'}
-                            </span>
-                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm">
-                                <i class="fas fa-comments mr-1"></i>
-                                ${data.messageCount || 0} messages
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                
-                ${data.toolsUsed && data.toolsUsed.length > 0 ? `
-                    <div class="space-y-4">
-                        <div class="bg-green-900/20 border border-green-600/30 rounded-lg p-4">
-                            <h4 class="text-green-400 font-semibold mb-3">
-                                <i class="fas fa-check-circle mr-2"></i>
-                                🛠️ Tools Successfully Used (${data.toolsUsed.length})
-                            </h4>
-                            <p class="text-green-300 text-sm mb-3">The following tools were identified and used during this conversation:</p>
-                        </div>
-                        
-                        ${data.toolsUsed.map((tool, index) => `
-                            <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-purple-500/50 transition-colors">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h5 class="text-white font-medium flex items-center">
-                                        <i class="fas fa-tool text-purple-400 mr-2"></i>
-                                        <span class="text-purple-400">#${index + 1}</span>
-                                        <span class="ml-2">${tool.name || `Unknown Tool`}</span>
-                                    </h5>
-                                    <span class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                        <i class="fas fa-check mr-1"></i>USED
-                                    </span>
-                                </div>
-                                
-                                ${tool.description ? `
-                                    <div class="mb-3">
-                                        <h6 class="text-purple-300 font-medium mb-1">📝 Description:</h6>
-                                        <p class="text-gray-300 text-sm">${tool.description}</p>
-                                    </div>
-                                ` : ''}
-                                
-                                ${tool.result ? `
-                                    <div class="bg-gray-900 border border-gray-600 rounded p-3">
-                                        <h6 class="text-purple-300 font-medium mb-2">
-                                            <i class="fas fa-code mr-1"></i>📊 Tool Result:
-                                        </h6>
-                                        <div class="text-gray-300 text-sm font-mono whitespace-pre-wrap max-h-40 overflow-y-auto bg-black/30 p-2 rounded">
-                                            ${typeof tool.result === 'object' ? JSON.stringify(tool.result, null, 2) : tool.result}
-                                        </div>
-                                    </div>
-                                ` : `
-                                    <div class="bg-gray-700/50 border border-gray-600 rounded p-3">
-                                        <p class="text-gray-400 text-sm italic">
-                                            <i class="fas fa-info-circle mr-1"></i>
-                                            No detailed result data available for this tool usage.
-                                        </p>
-                                    </div>
-                                `}
+        if (data.toolsUsed && Array.isArray(data.toolsUsed) && data.toolsUsed.length > 0) {
+            toolsContent = `
+                <div class="space-y-3">
+                    ${data.toolsUsed.map(tool => `
+                        <div class="bg-gray-700 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="font-semibold text-white">${tool.name || 'Unknown Tool'}</h5>
+                                <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded">
+                                    ${tool.category || 'Tool'}
+                                </span>
                             </div>
-                        `).join('')}
+                            ${tool.description ? `<p class="text-gray-300 text-sm mb-2">${tool.description}</p>` : ''}
+                            ${tool.usage ? `
+                                <div class="text-gray-400 text-xs">
+                                    <strong>Usage:</strong> ${tool.usage}
+                                </div>
+                            ` : ''}
+                            ${tool.result ? `
+                                <div class="text-gray-400 text-xs mt-1">
+                                    <strong>Result:</strong> ${tool.result}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            toolsContent = `
+                <div class="text-center py-8">
+                    <i class="fas fa-tools text-gray-400 text-4xl mb-4"></i>
+                    <p class="text-gray-400 text-lg">No tools were used in this conversation</p>
+                    <p class="text-gray-500 text-sm mt-2">The agent handled this conversation without requiring external tools or services.</p>
+                </div>
+            `;
+        }
+
+        const modal = this.createModal('🔧 Tools Used', `
+            <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-400">Duration:</span>
+                        <span class="text-white ml-2">${data.duration || 'N/A'}</span>
                     </div>
-                ` : `
-                    <div class="text-center py-12">
-                        <div class="bg-gray-800/50 border border-gray-700 rounded-lg p-8">
-                            <i class="fas fa-tools text-gray-400 text-5xl mb-4"></i>
-                            <h4 class="text-gray-300 text-xl font-semibold mb-2">No Tools Used</h4>
-                            <p class="text-gray-400 text-lg mb-3">This conversation was completed without using any external tools.</p>
-                            <p class="text-gray-500 text-sm">Tools such as email clients, databases, or APIs would appear here if they were used during the conversation.</p>
-                        </div>
+                    <div>
+                        <span class="text-gray-400">Date:</span>
+                        <span class="text-white ml-2">${data.date || 'N/A'}</span>
                     </div>
-                `}
-                
-                <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                    <h4 class="text-purple-400 font-semibold mb-3">
-                        <i class="fas fa-info-circle mr-2"></i>📅 Conversation Details
-                    </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                        <div class="bg-gray-900/50 rounded p-3">
-                            <span class="text-gray-400 block mb-1">📅 Date & Time:</span>
-                            <span class="text-white font-medium">${new Date(data.date).toLocaleString()}</span>
-                        </div>
-                        <div class="bg-gray-900/50 rounded p-3">
-                            <span class="text-gray-400 block mb-1">💬 Message Count:</span>
-                            <span class="text-white font-medium">${data.messageCount || 0}</span>
-                        </div>
-                        <div class="bg-gray-900/50 rounded p-3">
-                            <span class="text-gray-400 block mb-1">⏱️ Duration:</span>
-                            <span class="text-white font-medium">${data.duration || '0m 0s'}</span>
-                        </div>
-                        <div class="bg-gray-900/50 rounded p-3">
-                            <span class="text-gray-400 block mb-1">🤖 Agent:</span>
-                            <span class="text-white font-medium">${data.agent?.name || 'Unknown'}</span>
-                        </div>
+                    <div>
+                        <span class="text-gray-400">Status:</span>
+                        <span class="text-white ml-2 capitalize">${data.status || 'Unknown'}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Tools Count:</span>
+                        <span class="text-white ml-2">${data.toolsUsed ? data.toolsUsed.length : 0}</span>
                     </div>
                 </div>
-                
-                ${data.conversationId ? `
-                    <div class="bg-gray-900/30 border border-gray-600 rounded p-3">
-                        <span class="text-gray-400 text-xs">Conversation ID: </span>
-                        <code class="text-purple-400 text-xs font-mono">${data.conversationId}</code>
-                    </div>
-                ` : ''}
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6 max-h-96 overflow-y-auto">
+                ${toolsContent}
             </div>
         `);
-        
         document.body.appendChild(modal);
     }
 
     createModal(title, content) {
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
         modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="text-purple-400">${title}</h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" 
-                            aria-label="Close modal" title="Close modal">
-                        <i class="fas fa-times"></i>
+            <div class="bg-gray-900 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                <div class="flex justify-between items-center p-6 border-b border-gray-700">
+                    <h3 class="text-xl font-semibold text-white">${title}</h3>
+                    <button class="text-gray-400 hover:text-white text-2xl" onclick="this.closest('.fixed').remove()">
+                        &times;
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                     ${content}
                 </div>
             </div>
@@ -692,144 +538,151 @@ class FuturoAnalytics {
             }
         });
         
-        // Close modal when pressing Escape key
-        const handleEscape = (e) => {
-            if (e.key === 'Escape') {
-                modal.remove();
-                document.removeEventListener('keydown', handleEscape);
-            }
-        };
-        document.addEventListener('keydown', handleEscape);
-        
         return modal;
-    }
-
-    async logout() {
-        try {
-            await fetch('/api/logout', { method: 'POST' });
-            window.location.href = '/login';
-        } catch (error) {
-            console.error('Logout failed:', error);
-            // Force redirect anyway
-            window.location.href = '/login';
-        }
     }
 
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
+        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+            type === 'error' ? 'bg-red-600' : 
+            type === 'success' ? 'bg-green-600' : 
+            'bg-blue-600'
+        }`;
         notification.innerHTML = `
-            <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 
-                           type === 'success' ? 'fa-check-circle' : 
-                           type === 'warning' ? 'fa-exclamation-triangle' :
-                           'fa-info-circle'} mr-2"></i>
-            ${message}
+            <div class="flex items-center">
+                <span class="text-white">${message}</span>
+                <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                    &times;
+                </button>
+            </div>
         `;
         
         document.body.appendChild(notification);
         
-        // Show notification
-        setTimeout(() => notification.classList.add('show'), 100);
-        
-        // Hide notification after 4 seconds
+        // Auto-remove after 5 seconds
         setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                if (document.body.contains(notification)) {
-                    document.body.removeChild(notification);
-                }
-            }, 300);
-        }, 4000);
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    async logout() {
+        try {
+            const response = await fetch('/logout', { method: 'POST' });
+            if (response.ok) {
+                window.location.href = '/login';
+            } else {
+                this.showNotification('Failed to logout', 'error');
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            this.showNotification('Failed to logout', 'error');
+        }
     }
 }
 
-// Time-based Analytics Management Class
+
+// Time-based Analytics System
 class TimeBasedAnalytics {
     constructor() {
-        this.currentPeriod = 'today';
-        this.charts = {};
-        this.initializeEventListeners();
-        this.loadAnalytics('today');
+        this.currentPeriod = 'Last 30 Days';
+        this.timeSelector = null;
+        this.agentId = null;
+        this.initializeTimeSelector();
     }
 
-    initializeEventListeners() {
-        // Tab switching
-        document.querySelectorAll('.analytics-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const period = e.target.id.replace('tab-', '');
-                this.switchTab(period);
+    initializeTimeSelector() {
+        // Get the agent ID from the main analytics instance
+        if (window.analytics && window.analytics.currentAgent) {
+            this.agentId = window.analytics.currentAgent.id;
+        }
+
+        // Create time period selector
+        this.createTimeSelector();
+        
+        // Load initial data
+        this.loadTimeBasedData();
+    }
+
+    createTimeSelector() {
+        const analyticsContent = document.getElementById('analytics-content');
+        if (!analyticsContent) return;
+
+        // Create time period selector container
+        const selectorContainer = document.createElement('div');
+        selectorContainer.className = 'flex justify-center mb-6';
+        selectorContainer.innerHTML = `
+            <div class="flex bg-gray-800 rounded-lg p-1">
+                <button class="time-period-btn px-4 py-2 rounded-md text-sm font-medium transition-colors" data-period="Today">Today</button>
+                <button class="time-period-btn px-4 py-2 rounded-md text-sm font-medium transition-colors active" data-period="Last 7 Days">Last 7 Days</button>
+                <button class="time-period-btn px-4 py-2 rounded-md text-sm font-medium transition-colors" data-period="Last 30 Days">Last 30 Days</button>
+            </div>
+        `;
+
+        // Insert at the beginning of analytics content
+        analyticsContent.insertBefore(selectorContainer, analyticsContent.firstChild);
+
+        // Add event listeners
+        const buttons = selectorContainer.querySelectorAll('.time-period-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Update active state
+                buttons.forEach(b => b.classList.remove('active', 'bg-purple-600', 'text-white'));
+                e.target.classList.add('active', 'bg-purple-600', 'text-white');
+                
+                // Update current period and load data
+                this.currentPeriod = e.target.dataset.period;
+                this.loadTimeBasedData();
             });
         });
-    }
 
-    switchTab(period) {
-        // Update active tab
-        document.querySelectorAll('.analytics-tab').forEach(tab => {
-            tab.classList.remove('active', 'bg-purple-600', 'text-white');
-            tab.classList.add('bg-gray-700', 'text-gray-300');
-        });
-        
-        const targetTab = document.getElementById(`tab-${period}`);
-        if (targetTab) {
-            targetTab.classList.add('active', 'bg-purple-600', 'text-white');
-            targetTab.classList.remove('bg-gray-700', 'text-gray-300');
+        // Set initial active state
+        const defaultBtn = selectorContainer.querySelector('[data-period="Last 7 Days"]');
+        if (defaultBtn) {
+            defaultBtn.classList.add('bg-purple-600', 'text-white');
         }
-        
-        this.currentPeriod = period;
-        this.loadAnalytics(period);
     }
 
-    async loadAnalytics(period) {
+    async loadTimeBasedData() {
+        if (!this.agentId) {
+            console.warn('No agent ID available for time-based analytics');
+            return;
+        }
+
         try {
             // Show loading state
-            const loadingElement = document.getElementById('analytics-loading');
-            const dataElement = document.getElementById('analytics-data');
-            
-            if (loadingElement) loadingElement.style.display = 'block';
-            if (dataElement) dataElement.style.display = 'none';
+            this.showLoadingState();
 
-            // Fetch analytics data for the period
-            const response = await fetch(`/analytics/time-based/${period}`);
+            const response = await fetch(`/analytics/${this.agentId}/time-based?period=${encodeURIComponent(this.currentPeriod)}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: Failed to load time-based analytics`);
+            }
+
             const data = await response.json();
-
-            if (data.error) {
-                throw new Error(data.error);
-            }
-
-            // Update metrics
-            this.updateMetrics(data.metrics);
+            this.updateTimeBasedUI(data);
             
-            // Update charts
-            this.updateCharts(data.charts);
-            
-            // Update insights
-            if (data.insights) {
-                this.updateInsights(data.insights);
-            }
-            
-            // Show data, hide loading
-            if (loadingElement) loadingElement.style.display = 'none';
-            if (dataElement) dataElement.style.display = 'block';
-
         } catch (error) {
-            console.error('Error loading analytics:', error);
-            const loadingElement = document.getElementById('analytics-loading');
-            if (loadingElement) {
-                loadingElement.innerHTML = `
-                    <div class="text-center py-8">
-                        <div class="text-red-500 mb-4">
-                            <svg class="w-12 h-12 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <p class="text-gray-400">Failed to load analytics data</p>
-                        <button onclick="timeAnalytics.loadAnalytics('${period}')" class="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                            Retry
-                        </button>
-                    </div>
-                `;
-            }
+            console.error('Error loading time-based analytics:', error);
+            this.showErrorState();
         }
+    }
+
+    updateTimeBasedUI(data) {
+        // Update metrics
+        this.updateMetrics(data.metrics);
+        
+        // Update charts
+        this.updateCharts(data.charts);
+        
+        // Update insights
+        if (data.insights) {
+            this.updateInsights(data.insights);
+        }
+        
+        // Show data, hide loading
+        this.hideLoadingState();
     }
 
     updateMetrics(metrics) {
@@ -855,420 +708,111 @@ class TimeBasedAnalytics {
 
     updateChangeIndicator(elementId, change) {
         const element = document.getElementById(elementId);
-        if (!element) return;
+        if (!element || change === undefined || change === null) return;
 
-        const changeValue = change || 0;
-        const isPositive = changeValue >= 0;
+        const isPositive = change > 0;
+        const isNegative = change < 0;
         
-        element.textContent = `${isPositive ? '+' : ''}${changeValue}%`;
-        element.className = `text-sm ${isPositive ? 'text-green-500' : 'text-red-500'}`;
+        element.className = `text-sm ${isPositive ? 'text-green-500' : isNegative ? 'text-red-500' : 'text-gray-500'}`;
+        element.textContent = `${isPositive ? '+' : ''}${change}%`;
     }
 
-    updateCharts(chartData) {
-        // Destroy existing charts
-        Object.values(this.charts).forEach(chart => {
-            if (chart && typeof chart.destroy === 'function') {
-                chart.destroy();
-            }
-        });
-        this.charts = {};
-
-        // Create new charts
-        this.createPerformanceTrendChart(chartData.performanceTrend);
-        this.createCallSuccessRateTrendChart(chartData.callSuccessRateTrend);
-        this.createDurationDistributionChart(chartData.durationDistribution);
-        this.createCallOutcomesChart(chartData.callOutcomes);
-    }
-
-    createPerformanceTrendChart(data) {
-        const ctx = document.getElementById('performance-trend-chart');
-        if (!ctx) return;
-
-        this.charts.performanceTrend = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    label: 'Success Rate',
-                    data: data.successRate || [],
-                    borderColor: '#8B5CF6',
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4
-                }, {
-                    label: 'Call Volume',
-                    data: data.callVolume || [],
-                    borderColor: '#06B6D4',
-                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    yAxisID: 'y1'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: { color: '#E5E7EB' }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#9CA3AF' },
-                        grid: { color: 'rgba(75, 85, 99, 0.3)' }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        ticks: { color: '#9CA3AF' },
-                        grid: { color: 'rgba(75, 85, 99, 0.3)' }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        ticks: { color: '#9CA3AF' },
-                        grid: { drawOnChartArea: false }
-                    }
-                }
-            }
-        });
-    }
-
-    createCallSuccessRateTrendChart(data) {
-        const ctx = document.getElementById('evaluation-criteria-chart');
-        if (!ctx) return;
-
-        // Destroy existing chart
-        if (this.charts.callSuccessRateTrend) {
-            this.charts.callSuccessRateTrend.destroy();
+    updateCharts(charts) {
+        // Update call volume chart
+        if (charts.callVolume && typeof updateCallVolumeChart === 'function') {
+            updateCallVolumeChart(charts.callVolume);
         }
 
-        // Prepare data for line chart
-        const labels = data.data?.map(item => item.date) || [];
-        const successRates = data.data?.map(item => item.success_rate) || [];
-
-        this.charts.callSuccessRateTrend = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Success Rate (%)',
-                    data: successRates,
-                    borderColor: '#10B981',
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(75, 85, 99, 0.3)',
-                            drawBorder: false
-                        },
-                        ticks: {
-                            color: '#9CA3AF',
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: {
-                            color: 'rgba(75, 85, 99, 0.3)',
-                            drawBorder: false
-                        },
-                        ticks: {
-                            color: '#9CA3AF',
-                            font: {
-                                size: 12
-                            },
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                }
-            }
-        });
-    }
-
-    // Update caller interest rating gauge chart
-    updateCallerInterestRatingChart(data) {
-        const ctx = document.getElementById('callerInterestRatingChart');
-        if (!ctx) return;
-
-        // Calculate average rating from data
-        const averageRating = data.average_rating || 0;
-        
-        // Create gauge chart
-        if (this.charts.callerInterestRating) {
-            this.charts.callerInterestRating.destroy();
+        // Update success rate trend chart
+        if (charts.successRateTrend && typeof updateCallSuccessRateChart === 'function') {
+            updateCallSuccessRateChart(charts.successRateTrend);
         }
+    }
 
-        this.charts.callerInterestRating = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                datasets: [{
-                    data: [averageRating, 10 - averageRating],
-                    backgroundColor: ['#10B981', 'rgba(75, 85, 99, 0.3)'],
-                    borderWidth: 0,
-                    cutout: '75%'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#9CA3AF' },
-                        grid: { color: 'rgba(75, 85, 99, 0.3)' }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        max: 10,
-                        ticks: { 
-                            color: '#9CA3AF',
-                            callback: function(value) {
-                                return value + '/10';
-                            }
-                        },
-                        grid: { color: 'rgba(75, 85, 99, 0.3)' }
-                    }
-                }
-            }
+    updateInsights(insights) {
+        const insightsContainer = document.getElementById('insights-container');
+        if (!insightsContainer || !insights || !Array.isArray(insights)) return;
+
+        insightsContainer.innerHTML = insights.map(insight => `
+            <div class="bg-gray-800 rounded-lg p-4 border-l-4 ${this.getInsightBorderColor(insight.type)}">
+                <div class="flex items-center mb-2">
+                    <i class="fas ${this.getInsightIcon(insight.type)} mr-2 ${this.getInsightIconColor(insight.type)}"></i>
+                    <h4 class="font-semibold text-white">${insight.title}</h4>
+                </div>
+                <p class="text-gray-300 text-sm">${insight.description}</p>
+                ${insight.value ? `<div class="mt-2 text-lg font-bold ${this.getInsightValueColor(insight.type)}">${insight.value}</div>` : ''}
+            </div>
+        `).join('');
+    }
+
+    getInsightBorderColor(type) {
+        const colors = {
+            'positive': 'border-green-500',
+            'negative': 'border-red-500',
+            'neutral': 'border-blue-500',
+            'warning': 'border-yellow-500'
+        };
+        return colors[type] || 'border-gray-500';
+    }
+
+    getInsightIcon(type) {
+        const icons = {
+            'positive': 'fa-arrow-up',
+            'negative': 'fa-arrow-down',
+            'neutral': 'fa-info-circle',
+            'warning': 'fa-exclamation-triangle'
+        };
+        return icons[type] || 'fa-info-circle';
+    }
+
+    getInsightIconColor(type) {
+        const colors = {
+            'positive': 'text-green-500',
+            'negative': 'text-red-500',
+            'neutral': 'text-blue-500',
+            'warning': 'text-yellow-500'
+        };
+        return colors[type] || 'text-gray-500';
+    }
+
+    getInsightValueColor(type) {
+        const colors = {
+            'positive': 'text-green-400',
+            'negative': 'text-red-400',
+            'neutral': 'text-blue-400',
+            'warning': 'text-yellow-400'
+        };
+        return colors[type] || 'text-gray-400';
+    }
+
+    showLoadingState() {
+        const loadingElements = document.querySelectorAll('.metric-card, .glass-card');
+        loadingElements.forEach(el => {
+            el.style.opacity = '0.6';
         });
     }
 
-    createDurationDistributionChart(data) {
-        const ctx = document.getElementById('duration-distribution-chart');
-        if (!ctx) return;
-
-        this.charts.durationDistribution = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    label: 'Number of Calls',
-                    data: data.counts || [],
-                    backgroundColor: 'rgba(251, 191, 36, 0.8)',
-                    borderColor: '#F59E0B',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: { color: '#E5E7EB' }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#9CA3AF' },
-                        grid: { color: 'rgba(75, 85, 99, 0.3)' }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { color: '#9CA3AF' },
-                        grid: { color: 'rgba(75, 85, 99, 0.3)' }
-                    }
-                }
-            }
+    hideLoadingState() {
+        const loadingElements = document.querySelectorAll('.metric-card, .glass-card');
+        loadingElements.forEach(el => {
+            el.style.opacity = '1';
         });
     }
 
-    createCallOutcomesChart(data) {
-        const ctx = document.getElementById('call-outcomes-chart');
-        if (!ctx) return;
-
-        this.charts.callOutcomes = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    data: data.values || [],
-                    backgroundColor: [
-                        '#10B981', '#EF4444', '#6B7280'
-                    ],
-                    borderColor: [
-                        '#059669', '#DC2626', '#4B5563'
-                    ],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { 
-                            color: '#E5E7EB',
-                            padding: 20
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    updateInsights(data) {
-        // Update trend insights
-        this.updateTrendInsights(data.insights);
-        
-        // Update performance benchmarks
-        this.updatePerformanceBenchmarks(data.benchmarks);
-        
-        // Update recommendations
-        this.updateRecommendations(data.recommendations);
-        
-        // Update top conversations
-        this.updateTopConversations(data.topConversations);
-    }
-
-    updateTrendInsights(insights) {
-        const container = document.getElementById('trend-insights');
-        if (!container || !insights) return;
-
-        container.innerHTML = insights.map(insight => `
-            <div class="flex items-start space-x-3 p-3 bg-gray-800/50 rounded-lg">
-                <div class="flex-shrink-0">
-                    <span class="text-lg">${insight.icon}</span>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-white">${insight.title}</p>
-                    <p class="text-xs text-gray-400 mt-1">${insight.description}</p>
-                    <div class="mt-2">
-                        <span class="text-xs px-2 py-1 rounded-full ${insight.trend === 'positive' ? 'bg-green-900 text-green-300' : insight.trend === 'negative' ? 'bg-red-900 text-red-300' : 'bg-gray-700 text-gray-300'}">
-                            ${insight.value}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    updatePerformanceBenchmarks(benchmarks) {
-        const container = document.getElementById('performance-benchmarks');
-        if (!container || !benchmarks) return;
-
-        container.innerHTML = benchmarks.map(benchmark => `
-            <div class="p-3 bg-gray-800/50 rounded-lg">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-white">${benchmark.metric}</span>
-                    <span class="text-xs text-gray-400">${benchmark.period}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <div class="flex-1 bg-gray-700 rounded-full h-2">
-                        <div class="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full" style="width: ${benchmark.percentage}%"></div>
-                    </div>
-                    <span class="text-sm font-semibold text-white">${benchmark.value}</span>
-                </div>
-                <p class="text-xs text-gray-400 mt-1">${benchmark.comparison}</p>
-            </div>
-        `).join('');
-    }
-
-    updateRecommendations(recommendations) {
-        const container = document.getElementById('recommendations');
-        if (!container || !recommendations) return;
-
-        container.innerHTML = recommendations.map(rec => `
-            <div class="p-4 bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-lg border border-purple-500/20">
-                <div class="flex items-start space-x-3">
-                    <span class="text-lg">${rec.icon}</span>
-                    <div class="flex-1">
-                        <h5 class="text-sm font-semibold text-white">${rec.title}</h5>
-                        <p class="text-xs text-gray-300 mt-1">${rec.description}</p>
-                        <div class="mt-2">
-                            <span class="text-xs px-2 py-1 bg-purple-600 text-white rounded-full">
-                                ${rec.impact}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    updateTopConversations(conversations) {
-        const container = document.getElementById('top-conversations');
-        if (!container || !conversations) return;
-
-        container.innerHTML = conversations.map((conv, index) => `
-            <div class="flex items-center space-x-4 p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                        <span class="text-sm font-bold text-white">${index + 1}</span>
-                    </div>
-                </div>
-                <div class="flex-1">
-                    <div class="flex items-center justify-between">
-                        <h5 class="text-sm font-medium text-white">${conv.title}</h5>
-                        <span class="text-xs text-gray-400">${conv.date}</span>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-1">${conv.summary}</p>
-                    <div class="flex items-center space-x-4 mt-2">
-                        <span class="text-xs px-2 py-1 bg-green-900 text-green-300 rounded-full">
-                            ${conv.successRate}% Success
-                        </span>
-                        <span class="text-xs text-gray-400">
-                            ${conv.duration} • ${conv.messages} messages
-                        </span>
-                    </div>
-                </div>
-                <div class="flex-shrink-0">
-                    <button onclick="showConversationDetails('${conv.id}')" class="text-purple-400 hover:text-purple-300 text-xs">
-                        View Details
-                    </button>
-                </div>
-            </div>
-        `).join('');
+    showErrorState() {
+        this.hideLoadingState();
+        console.warn('Failed to load time-based analytics data');
     }
 }
 
-// Global initialization
+// Initialize the analytics dashboard when the page loads
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize the main analytics system
     window.analytics = new FuturoAnalytics();
-    
-    // Add logout button event handler
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function() {
-            if (window.analytics) {
-                window.analytics.logout();
-            }
-        });
-    }
 });
 
-// Global helper functions
-function showConversationDetails(conversationId) {
+// Global logout function
+function logout() {
     if (window.analytics) {
-        window.analytics.viewDataAnalysis(conversationId);
+        window.analytics.logout();
     }
 }
-
