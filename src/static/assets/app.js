@@ -141,9 +141,10 @@ class FuturoAnalytics {
             avgCallDuration.textContent = data.avgCallDuration || '0m 0s';
         }
         
-        const positiveSentiment = document.querySelector('.metric-positive-sentiment');
-        if (positiveSentiment) {
-            positiveSentiment.textContent = `${data.positiveSentimentPercentage || 0}%`;
+        // Update the second avg call duration element (previously misused for sentiment)
+        const avgCallDuration2 = document.getElementById('metric-avg-duration-2');
+        if (avgCallDuration2) {
+            avgCallDuration2.textContent = data.avgCallDuration || '0m 0s';
         }
         
         // Update evaluation score in the top metrics area
@@ -747,12 +748,15 @@ class TimeBasedAnalytics {
         const avgDurationElement = document.getElementById('metric-avg-duration');
         const currentAvgDuration = avgDurationElement ? avgDurationElement.textContent : '';
         
+        const avgDurationValue = (currentAvgDuration && currentAvgDuration !== '0m 0s' && currentAvgDuration !== '-') 
+            ? currentAvgDuration 
+            : (metrics.avgDuration || '0m 0s');
+        
         const elements = {
             'metric-total-calls': metrics.totalCalls || '0',
             'metric-success-rate': `${metrics.successRate || 0}%`,
-            'metric-avg-duration': (currentAvgDuration && currentAvgDuration !== '0m 0s' && currentAvgDuration !== '-') 
-                ? currentAvgDuration 
-                : (metrics.avgDuration || '0m 0s'),
+            'metric-avg-duration': avgDurationValue,
+            'metric-avg-duration-2': avgDurationValue,  // Update both duration elements with same value
             'metric-eval-score': `${metrics.evaluationScore || 0}%`
         };
 
